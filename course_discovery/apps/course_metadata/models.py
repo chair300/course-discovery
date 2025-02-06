@@ -645,6 +645,31 @@ class CourseRunType(TimeStampedModel):
 
     def __str__(self):
         return self.name
+        def clean(self):
+        if not self.key:
+            self.key = self._generate_key()
+        super().clean()
+
+    def _generate_key(self):
+        """Generate a course run key."""
+        if not (self.course and self.start):
+            raise ValidationError("Course and start date are required to generate key")
+
+        org = self.course.partner.short_code
+        course_number = self.course.number
+
+        # Generate run based on start date
+        year = self.start.year
+        # Map month to term (1T, 2T, 3T, 4T)
+        term = str((self.start.month - 1) // 3 + 1) + 'T'
+        run = f"{term}{year}"
+
+        return f"{org}+{course_number}+{run}"
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = self._generate_key()
+        super().save(*args, **kwargs)
 
     @property
     def empty(self):
